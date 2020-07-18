@@ -26,7 +26,7 @@ const ( // 类似于java中的final定义,定义常量全为大写, 用括号包
 	INDEX = "around" // index本质是与项目的名称保持一致
 	TYPE = "post"
 	DISTANCE = "200km"
-	ES_URL = "http://34.71.213.156:9200"
+	ES_URL = "http://35.239.246.93:9200" // 每次stop gcloud instance后重启，这个url都需要更改
 
 
 )
