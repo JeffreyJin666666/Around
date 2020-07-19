@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/pborman/uuid"
-	elastic "gopkg.in/olivere/elastic.v3"
+	elastic "gopkg.in/olivere/elastic.v7"
 )
 
 type Location struct {
@@ -44,7 +45,7 @@ func main() {
 	}
 
 	// Use the IndexExists service to check if a specified index exists.
-	exists, err := client.IndexExists(INDEX).Do()
+	exists, err := client.IndexExists(INDEX).Do(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -61,7 +62,7 @@ func main() {
 				}
 			}
 		}`
-		_, err := client.CreateIndex(INDEX).Body(mapping).Do()
+		_, err := client.CreateIndex(INDEX).Body(mapping).Do(context.Background())
 		if err != nil {
 			// Handle error
 			panic(err)
@@ -111,8 +112,8 @@ func saveToES(p *Post, id string) {
 		Type(TYPE).
 		Id(id).
 		BodyJson(p).
-		Refresh(true).
-		Do()
+		// Refresh(true).
+		Do(context.Background())
 	if err != nil {
 		panic(err)
 		return
@@ -151,7 +152,7 @@ func handlerSearch(w http.ResponseWriter, r *http.Request) {
 		Index(INDEX).
 		Query(q).
 		Pretty(true).
-		Do()
+		Do(context.Background())
 	if err != nil {
 		// Handle error
 		panic(err)
