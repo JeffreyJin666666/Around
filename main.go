@@ -19,7 +19,7 @@ type Location struct {
 }
 
 type Post struct {
-	User     string   `json:"user"` // User 必须大写，不然不是public
+	User     string   `json:"user"`
 	Message  string   `json:"message"`
 	Location Location `json:"location"`
 }
@@ -37,7 +37,7 @@ const (
 
 func main() {
 	// Create a client
-	client, err := elastic.NewClient(elastic.SetURL(ES_URL), elastic.SetSniff(false))
+	client, err := elastic.NewClient(elastic.SetURL(ES_URL), elastic.SetSniff(false), elastic.SetHealthcheck(false))
 	if err != nil {
 		panic(err)
 		return
@@ -81,7 +81,6 @@ func main() {
 //	"lat": 37
 // "lon": -120
 //}
-//} http.Request中只能包含以上格式的json，格式必须一一对应
 
 func handlerPost(w http.ResponseWriter, r *http.Request) {
 	// Parse from body of request to get a json object.
@@ -172,9 +171,10 @@ func handlerSearch(w http.ResponseWriter, r *http.Request) {
 	for _, item := range searchResult.Each(reflect.TypeOf(typ)) { // instance of
 		p := item.(Post) // p = (Post) item
 		fmt.Printf("Post by %s: %s at lat %v and lon %v\n", p.User, p.Message, p.Location.Lat, p.Location.Lon)
-		// TODO(student homework): Perform filtering based on keywords such as web spam etc.
-		ps = append(ps, p)
-
+		// Perform filtering based on keywords such as web spam etc.
+		if !containsFilteredWords(&p.Message) {
+			ps = append(ps, p)
+		}
 	}
 	js, err := json.Marshal(ps)
 	if err != nil {
