@@ -18,7 +18,8 @@ import (
 	"path/filepath"
 	"reflect" // ！！！！！！！！！！！！！！！！！！！有待补充
 	"strconv" // go用于将string转化为其他类型 例如float64
-
+	
+	"github.com/gorilla/mux"
 	"cloud.google.com/go/storage"
 	"github.com/google/uuid"
 	"github.com/olivere/elastic" // 调用默认名是elastic this package (elastic) provides an interface to the elasticsearch server
@@ -61,16 +62,30 @@ type Post struct {
 }
 
 func main() {
-	fmt.Println("started-service")
-	http.HandleFunc("/post", handlerPost)     // servelet样的doPost
-	http.HandleFunc("/search", handlerSearch) // servelet样的doget
-	http.HandleFunc("/cluster", handlerCluster)
-	log.Fatal(http.ListenAndServe(":8080", nil)) // log fatal的意思如果出现程序的fatel应该终止
+
+	r := mux.NewRouter()
+	r.Handle("/post", http.HandlerFunc(handlerPost)).Methods("POST", "OPTIONS") 
+	r.Handle("/search", http.HandlerFunc(handlerSearch)).Methods("GET", "OPTIONS") 
+	r.Handle("/cluster", http.HandlerFunc(handlerCluster)).Methods("GET", "OPTIONS")
+	​log.Fatal(http.ListenAndServe(":8080", ​r​))
+
+	// fmt.Println("started-service")
+	// http.HandleFunc("/post", handlerPost)     // servelet样的doPost
+	// http.HandleFunc("/search", handlerSearch) // servelet样的doget
+	// http.HandleFunc("/cluster", handlerCluster)
+	// log.Fatal(http.ListenAndServe(":8080", nil)) // log fatal的意思如果出现程序的fatel应该终止
 }
 
 func handlerPost(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Received one post request")
 	w.Header().Set("Content-Type", "application/json")
+
+	w.Header().Set("Access-Control-Allow-Origin", "*") 
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
+	if r.Method == "OPTIONS" { 
+		return
+	}
+
 	lat, _ := strconv.ParseFloat(r.FormValue("lat"), 64)
 	lon, _ := strconv.ParseFloat(r.FormValue("lon"), 64)
 	p := &Post{
@@ -129,6 +144,13 @@ func handlerPost(w http.ResponseWriter, r *http.Request) {
 func handlerSearch(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Received one request for search")
 	w.Header().Set("Content-Type", "application/json")
+
+	w.Header().Set("Access-Control-Allow-Origin", "*") 
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
+	if r.Method == "OPTIONS" { 
+		return
+	}
+
 	lat, _ := strconv.ParseFloat(r.URL.Query().Get("lat"), 64)
 	lon, _ := strconv.ParseFloat(r.URL.Query().Get("lon"), 64)
 	ran := DISTANCE // range is optional
@@ -182,6 +204,13 @@ func getPostFromSearchResult(searchResult *elastic.SearchResult) []Post { //
 func handlerCluster(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Received one cluster request")
 	w.Header().Set("Content-Type", "application/json")
+
+	w.Header().Set("Access-Control-Allow-Origin", "*") 
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
+	if r.Method == "OPTIONS" { 
+		return
+	}
+
 	term := r.URL.Query().Get("term")
 	query := elastic.NewRangeQuery(term).Gte(0.9)
 	searchResult, err := readFromES(query, POST_INDEX)
