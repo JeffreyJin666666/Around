@@ -18,15 +18,14 @@ import (
 	"path/filepath"
 	"reflect" // ！！！！！！！！！！！！！！！！！！！有待补充
 	"strconv" // go用于将string转化为其他类型 例如float64
-	
-	"github.com/gorilla/mux"
+
 	"cloud.google.com/go/storage"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/olivere/elastic" // 调用默认名是elastic this package (elastic) provides an interface to the elasticsearch server
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware"
 	jwt "github.com/dgrijalva/jwt-go"
-
 )
 
 const ( // 类似java中的final定义，定义常量应当全部为大写，用括号包裹所有的const而不是{}
@@ -69,21 +68,20 @@ func main() {
 
 	fmt.Println("started-service")
 
-	jwtMiddleware := jwtmiddleware.New(jwtmiddleware.Options{ 
+	jwtMiddleware := jwtmiddleware.New(jwtmiddleware.Options{
 		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
-			return []byte(mySigningKey), nil 
+			return []byte(mySigningKey), nil
 		},
-		SigningMethod: jwt.SigningMethodHS256, 
+		SigningMethod: jwt.SigningMethodHS256,
 	})
 
 	r := mux.NewRouter()
 	r.Handle("/post", jwtMiddleware.Handler(http.HandlerFunc(handlerPost))).Methods("POST", "OPTIONS")
 	r.Handle("/search", jwtMiddleware.Handler(http.HandlerFunc(handlerSearch))).Methods("GET", "OPTIONS")
 	r.Handle("/cluster", jwtMiddleware.Handler(http.HandlerFunc(handlerCluster))).Methods("GET", "OPTIONS")
-	r.Handle("/signup", http.HandlerFunc(handlerSignup)).Methods("POST", "OPTIONS") 
+	r.Handle("/signup", http.HandlerFunc(handlerSignup)).Methods("POST", "OPTIONS")
 	r.Handle("/login", http.HandlerFunc(handlerLogin)).Methods("POST", "OPTIONS")
-	​log.Fatal(http.ListenAndServe(":8080", ​r​))
-
+	log.Fatal(http.ListenAndServe(":8080", r))
 
 	// http.HandleFunc("/post", handlerPost)     // servelet样的doPost
 	// http.HandleFunc("/search", handlerSearch) // servelet样的doget
@@ -95,9 +93,9 @@ func handlerPost(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Received one post request")
 	w.Header().Set("Content-Type", "application/json")
 
-	w.Header().Set("Access-Control-Allow-Origin", "*") 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
-	if r.Method == "OPTIONS" { 
+	if r.Method == "OPTIONS" {
 		return
 	}
 
@@ -108,7 +106,7 @@ func handlerPost(w http.ResponseWriter, r *http.Request) {
 	lat, _ := strconv.ParseFloat(r.FormValue("lat"), 64)
 	lon, _ := strconv.ParseFloat(r.FormValue("lon"), 64)
 	p := &Post{
-		​User: username.(string),
+		User:    username.(string),
 		Message: r.FormValue("message"),
 		Location: Location{
 			Lat: lat,
@@ -128,7 +126,7 @@ func handlerPost(w http.ResponseWriter, r *http.Request) {
 	} else {
 		p.Type = "unknown"
 	}
-	id := uuid.New()
+	id := uuid.New().String()
 	mediaLink, err := saveToGCS(file, id)
 	if err != nil {
 		http.Error(w, "Failed to save image to GCS", http.StatusInternalServerError)
@@ -165,9 +163,9 @@ func handlerSearch(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Received one request for search")
 	w.Header().Set("Content-Type", "application/json")
 
-	w.Header().Set("Access-Control-Allow-Origin", "*") 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
-	if r.Method == "OPTIONS" { 
+	if r.Method == "OPTIONS" {
 		return
 	}
 
@@ -225,9 +223,9 @@ func handlerCluster(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Received one cluster request")
 	w.Header().Set("Content-Type", "application/json")
 
-	w.Header().Set("Access-Control-Allow-Origin", "*") 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
-	if r.Method == "OPTIONS" { 
+	if r.Method == "OPTIONS" {
 		return
 	}
 
@@ -248,13 +246,13 @@ func handlerCluster(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
-func saveToES(​i interface{}​, index string, id string) error { 
-	client, err := elastic.NewClient(elastic.SetURL(ES_URL)) 
+func saveToES(i interface{}, index string, id string) error {
+	client, err := elastic.NewClient(elastic.SetURL(ES_URL))
 	if err != nil {
-		return err 
+		return err
 	}
-	_, err = client.Index().Index(index).Id(id).BodyJson(i). Do(context.Background())
-	if err != nil { 
+	_, err = client.Index().Index(index).Id(id).BodyJson(i).Do(context.Background())
+	if err != nil {
 		return err
 	}
 	return nil

@@ -66,7 +66,8 @@ func handlerLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "OPTIONS" {
 		return
 	}
-	// Get User information from client decoder := json.NewDecoder(r.Body)
+	// Get User information from client
+	decoder := json.NewDecoder(r.Body)
 	var user User
 	if err := decoder.Decode(&user); err != nil {
 		http.Error(w, "Cannot decode user data from client", http.StatusBadRequest)
@@ -75,7 +76,7 @@ func handlerLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	exists, err := checkUser(user.Username, user.Password)
 	if err != nil {
-		ttp.Error(w, "Failed to read user from Elasticsearch", http.StatusInternalServerError)
+		http.Error(w, "Failed to read user from Elasticsearch", http.StatusInternalServerError)
 		fmt.Printf("Failed to read user from Elasticsearch %v\n", err)
 		return
 	}
@@ -112,7 +113,7 @@ func handlerSignup(w http.ResponseWriter, r *http.Request) {
 	if user.Username == "" || user.Password == "" || regexp.MustCompile(`^[a-z0-9]$`).MatchString(user.Username) {
 		http.Error(w, "Invalid username or password", http.StatusBadRequest)
 		fmt.Printf("Invalid username or password\n")
-		eturn
+		return
 	}
 	success, err := addUser(&user)
 	if err != nil {
