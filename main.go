@@ -23,13 +23,17 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/google/uuid"
 	"github.com/olivere/elastic" // 调用默认名是elastic this package (elastic) provides an interface to the elasticsearch server
+
+	jwtmiddleware "github.com/auth0/go-jwt-middleware"
+	jwt "github.com/dgrijalva/jwt-go"
+
 )
 
 const ( // 类似java中的final定义，定义常量应当全部为大写，用括号包裹所有的const而不是{}
 	POST_INDEX  = "post" //index的含义是，在elasticsearch的数据库端，创建了一个叫做post的index，（index之于es的意义，类似于table之于sql）
 	DISTANCE    = "200km"
-	ES_URL      = "http://​10.128.0.5​:9200/" //inner url，不能用external url
-	BUCKET_NAME = "​283905-bucket"
+	ES_URL      = "http://10.128.0.5:9200/" //inner url，不能用external url
+	BUCKET_NAME = "283905-bucket"
 )
 
 var (
@@ -63,13 +67,24 @@ type Post struct {
 
 func main() {
 
+	fmt.Println("started-service")
+
+	jwtMiddleware := jwtmiddleware.New(jwtmiddleware.Options{ 
+		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+			return []byte(mySigningKey), nil 
+		},
+		SigningMethod: jwt.SigningMethodHS256, 
+	})
+
 	r := mux.NewRouter()
-	r.Handle("/post", http.HandlerFunc(handlerPost)).Methods("POST", "OPTIONS") 
-	r.Handle("/search", http.HandlerFunc(handlerSearch)).Methods("GET", "OPTIONS") 
-	r.Handle("/cluster", http.HandlerFunc(handlerCluster)).Methods("GET", "OPTIONS")
+	r.Handle("/post", jwtMiddleware.Handler(http.HandlerFunc(handlerPost))).Methods("POST", "OPTIONS")
+	r.Handle("/search", jwtMiddleware.Handler(http.HandlerFunc(handlerSearch))).Methods("GET", "OPTIONS")
+	r.Handle("/cluster", jwtMiddleware.Handler(http.HandlerFunc(handlerCluster))).Methods("GET", "OPTIONS")
+	r.Handle("/signup", http.HandlerFunc(handlerSignup)).Methods("POST", "OPTIONS") 
+	r.Handle("/login", http.HandlerFunc(handlerLogin)).Methods("POST", "OPTIONS")
 	​log.Fatal(http.ListenAndServe(":8080", ​r​))
 
-	// fmt.Println("started-service")
+
 	// http.HandleFunc("/post", handlerPost)     // servelet样的doPost
 	// http.HandleFunc("/search", handlerSearch) // servelet样的doget
 	// http.HandleFunc("/cluster", handlerCluster)
@@ -86,15 +101,20 @@ func handlerPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user := r.Context().Value("user")
+	claims := user.(*jwt.Token).Claims
+	username := claims.(jwt.MapClaims)["username"]
+
 	lat, _ := strconv.ParseFloat(r.FormValue("lat"), 64)
 	lon, _ := strconv.ParseFloat(r.FormValue("lon"), 64)
 	p := &Post{
-		User:    r.FormValue("user"),
+		​User: username.(string),
 		Message: r.FormValue("message"),
 		Location: Location{
 			Lat: lat,
 			Lon: lon,
 		},
+		Face: 0.0,
 	}
 	file, header, err := r.FormFile("image")
 	if err != nil {
@@ -228,16 +248,15 @@ func handlerCluster(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
-func saveToES(post *Post, index string, id string) error {
-	client, err := elastic.NewClient(elastic.SetURL(ES_URL))
+func saveToES(​i interface{}​, index string, id string) error { 
+	client, err := elastic.NewClient(elastic.SetURL(ES_URL)) 
 	if err != nil {
+		return err 
+	}
+	_, err = client.Index().Index(index).Id(id).BodyJson(i). Do(context.Background())
+	if err != nil { 
 		return err
 	}
-	_, err = client.Index().Index(index).Id(id).BodyJson(post).Do(context.Background())
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Post is saved to index: %s\n", post.Message)
 	return nil
 }
 

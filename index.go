@@ -11,7 +11,7 @@ import (
 
 const (
 	POST_INDEX = "post" //index的含义是，在elasticsearch的数据库端，创建了一个叫做post的index，（index之于es的意义，类似于table之于sql）
-	​USER_INDEX = "user"
+	USER_INDEX = "user"
 	ES_URL     = "http://10.128.0.5:9200"
 )
 
@@ -44,11 +44,11 @@ func main() {
 		}
 	}
 
-	exists, err = client.IndexExists(USER_INDEX).Do(context.Background()) 
+	exists, err = client.IndexExists(USER_INDEX).Do(context.Background())
 	if err != nil {
-		panic(err) 
+		panic(err)
 	}
-	if !exists { 
+	if !exists {
 		mapping := `{
 			"mappings": { 
 				"properties": {
@@ -60,9 +60,9 @@ func main() {
 			}
 		}`
 
-		_, err = client.CreateIndex(USER_INDEX).Body(mapping).Do(context.Background()) 
+		_, err = client.CreateIndex(USER_INDEX).Body(mapping).Do(context.Background())
 		if err != nil {
-			panic(err) 
+			panic(err)
 		}
 	}
 
