@@ -9,5 +9,5 @@ jobs:
       - setup_remote_docker 
       - run: |
         docker build -t ​jeffreyjin927/around .
-        docker login -u="$jeffreyjin927" -p="$jefferey30" 
+        docker login -u="$DOCKERHUB_USERNAME" -p="$DOCKERHUB_PASSWORD"
         docker push ​jeffreyjin927​/around
